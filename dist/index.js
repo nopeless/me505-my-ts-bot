@@ -1,28 +1,36 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const discord_js_1 = require("discord.js");
-const fs = require("fs");
-const path = require("node:path");
+import { Client, GatewayIntentBits } from "discord.js";
+import fs from "fs";
+import path from "path";
+// make require
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+import * as url from 'url';
+const __dirname = url.fileURLToPath(new URL('.', import.meta.url));
 const Intents = [
-    discord_js_1.GatewayIntentBits.Guilds,
-    discord_js_1.GatewayIntentBits.GuildMessages,
-    discord_js_1.GatewayIntentBits.MessageContent
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent
 ];
-const bot = new discord_js_1.Client({ intents: Intents });
+const bot = new Client({ intents: Intents });
 // event handeler
 const eventPath = path.join(__dirname, "events");
 const eventFiles = fs.readdirSync(eventPath).filter(file => file.endsWith('.js'));
 console.log(eventFiles);
-for (const file of eventFiles) {
-    const filePath = path.join(eventPath, file);
-    console.log(filePath);
-    const event = require(filePath)["default"];
-    console.log(event, event["name"]);
-    if (event["once"]) {
-        bot.once(event["name"], (...args) => { event["execute"](...args); });
+const eventHandle = async () => {
+    for (const file of eventFiles) {
+        const filePath = path.join(eventPath, file);
+        console.log(filePath);
+        // const event = require(filePath)
+        let event = await import(filePath);
+        event = event["default"];
+        console.log(event, event["name"]);
+        if (event["once"]) {
+            bot.once(event["name"], (...args) => { event["execute"](...args); });
+        }
+        else {
+            bot.on(event.name, (...args) => { event.execute(...args); });
+        }
     }
-    else {
-        bot.on(event.name, (...args) => { event.execute(...args); });
-    }
-}
+};
+eventHandle();
 bot.login(process.env.BOT_TOKEN);

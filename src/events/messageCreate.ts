@@ -1,6 +1,8 @@
 import { Events, Message } from "discord.js"
-const fs = require("fs")
-const path = require("path")
+import * as url from 'url'
+const __dirname = url.fileURLToPath(new URL('.', import.meta.url));
+import fs from "fs"
+import path from "path"
 export default {
   name: Events.MessageCreate,
   async execute(msg: Message) {
