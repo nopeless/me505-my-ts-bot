@@ -18,7 +18,8 @@ export default {
             var target_file = commandFiles[i].split(".")[0];
             if (msgList[0] == ("/" + target_file)) {
                 let target_command_path = commandsPath + '/' + commandFiles[i];
-                const command = require(target_command_path);
+                let command = await import(target_command_path);
+                command = command["default"];
                 await command.execute(msg);
             }
         }

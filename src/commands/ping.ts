@@ -1,8 +1,9 @@
 const { Message } = require("discord.js");
-
-module.exports = {
+let Default = {
   name: "ping",
   async execute(msg: typeof Message) {
     msg.reply("pong!")
+    console.log(msg)
   }
 }
+export { Default }

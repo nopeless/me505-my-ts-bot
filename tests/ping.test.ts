@@ -1,5 +1,6 @@
-const { Client, Message } = require('discord.js');
-const ping = require('./../src/commands/ping.ts')
+// import { Message } from 'discord.js';
+import { Default } from '../src/commands/ping.ts'
+console.log(Default)
 describe('ping command', () => {
   let message: any;
 
@@ -15,7 +16,10 @@ describe('ping command', () => {
   });
 
   it('should reply with pong!', () => {
-    ping.execute(message)
+    Default["execute"](message)
+    console.log(message)
     expect(message.reply).toHaveBeenCalledWith('pong!');
   });
 });
+let Default = { func: describe }
+export { Default }
