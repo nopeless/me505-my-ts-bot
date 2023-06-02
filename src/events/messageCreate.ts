@@ -1,31 +1,60 @@
 import { Events, Message } from "discord.js"
 import { readdirSync } from "fs"
-const commandsPath = "/data/data/com.termux/files/home/my-ts-bot/dist/commands"
-let Default = {
-  name: Events.MessageCreate,
-  async execute(msg: Message,) {
-    // command handeler
-    if (!msg.content.startsWith("/")) return;
-    console.log("/ command revcieved")
+import path from "path"
+import { CommandModule, EventModule } from "../types.js";
+import { fileURLToPath, pathToFileURL } from "url";
+import { matchNonIndexJsTs } from "../util.js";
 
-    const msgList: string[] = msg.content.split(" ")
-    const commandFiles: string[] = (readdirSync(commandsPath) as string[]).filter(file => file.endsWith('.js'));
-    for (let i = 0; i < (commandFiles.length); i++) {
+const __dirname = fileURLToPath(new URL('.', import.meta.url))
 
-      // removes the .js
-      var target_file = commandFiles[i].split(".")[0]
+// use relative paths
+const commandsPath = path.join(__dirname, "../commands");
 
-      if (msgList[0] == ("/" + target_file)) {
-        let target_command_path: string = commandsPath + '/' + commandFiles[i]
-        console.log(target_command_path)
-        let command = await import(target_command_path)
-        console.log(command)
-        command = command.default
-        await command.execute(msg)
+// create mapping ahead of time
+// top level await is possible in esm
 
+async function createModuleMapping() {
+  const moduleMapping = new Map<string, CommandModule>();
+  
+  const commandFiles = readdirSync(commandsPath).filter(matchNonIndexJsTs);
+
+  const moduleImports: Promise<void>[] = []
+
+  for (const commandFile of commandFiles) {
+    // use path.parse().name as it is a more standard api
+    const baseName = path.parse(commandFile).name;
+
+    const uri = pathToFileURL(path.resolve(commandsPath, commandFile)).href;
+
+    const mi = import(uri).then(
+      (module: { default: CommandModule }) => {
+        moduleMapping.set(baseName, module.default);
       }
-    }
+    )
+
+    moduleImports.push(mi)
   }
+
+  await Promise.all(moduleImports);
+
+  return moduleMapping;
 }
 
-export { Default }
+const moduleMapping = await createModuleMapping();
+
+export default {
+  name: Events.MessageCreate,
+  async execute(msg: Message) {
+    // command handeler
+    if (!msg.content.startsWith("/")) return;
+    console.log("/ command received")
+
+    const [command] = msg.content.match(/\/\S+/) ?? [];
+    if (!command) return;
+
+    console.log(moduleMapping)
+
+    // execute if command exists
+    moduleMapping.get(command.slice(1))?.execute(msg);
+  }
+} satisfies EventModule

@@ -1,38 +1,39 @@
-import { Client, GatewayIntentBits } from "discord.js"
 import fs from "fs"
 import path from "path"
+import { fileURLToPath, pathToFileURL } from "url"
 
-// make require
-import { createRequire } from "module";
-const require = createRequire(import.meta.url)
-import * as url from 'url';
-const __dirname = url.fileURLToPath(new URL('.', import.meta.url))
+import { Client, GatewayIntentBits } from "discord.js"
+import * as dotenv from "dotenv"
+
+import { EventModule } from "./types.js"
+import { matchNonIndexJsTs } from "./util.js"
+
+dotenv.config()
+
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
+
+console.log(__dirname)
+
 const Intents: GatewayIntentBits[] = [
   GatewayIntentBits.Guilds,
   GatewayIntentBits.GuildMessages,
   GatewayIntentBits.MessageContent
 ]
-const bot: Client = new Client({ intents: Intents })
+const bot = new Client({ intents: Intents })
 
 // event handeler
-const eventPath: string = path.join(__dirname, "events");
-const eventFiles: string[] = (fs.readdirSync(eventPath) as string[]).filter(file => file.endsWith('.js'));
-console.log(eventFiles)
+const eventPath = path.join(__dirname, "events");
+const eventFiles = fs.readdirSync(eventPath).filter(matchNonIndexJsTs);
 
-const eventHandle = async () => {
-  for (const file of eventFiles) {
-    const filePath: string = path.join(eventPath, file);
-    console.log(filePath)
-    // const event = require(filePath)
-    let event = await import(filePath)
-    event = event["default"]
-    console.log(event, event["name"])
-    if (event["once"]) {
-      bot.once(event["name"], (...args) => { event["execute"](...args) });
-    } else {
-      bot.on(event.name, (...args) => { event.execute(...args) });
-    }
-  }
+async function registerEventModuleFile(file: string) {
+  const uri = pathToFileURL(path.resolve(eventPath, file)).href;
+  const event: EventModule = (await import(uri)).default;
+  
+  console.log(event, event["name"])
+  
+  bot[event.once ? "once" : "on"](event.name, event.execute);
 }
-eventHandle()
+
+await Promise.all(eventFiles.map(file => registerEventModuleFile(path.join(eventPath, file))))
+
 bot.login(process.env.BOT_TOKEN)
