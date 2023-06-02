@@ -1,9 +1,9 @@
-const { Message } = require("discord.js");
-let Default = {
+import { Message } from "discord.js";
+import { CommandModule } from "../types.js";
+
+export default {
   name: "ping",
-  async execute(msg: typeof Message) {
-    msg.reply("pong!")
-    console.log(msg)
+  async execute(msg: Message) {
+    msg.reply("pong!");
   }
-}
-export { Default }
+} satisfies CommandModule
