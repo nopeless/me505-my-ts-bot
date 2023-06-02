@@ -1,6 +1,10 @@
 # These gitignores can be found at
 # https://github.com/github/gitignore
 
+# ide
+.vscode
+.idea
+
 # Logs
 logs
 *.log
